@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand/v2"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -20,10 +21,16 @@ const (
 	TTL_PRJECTILE                   = 45
 	PROJECTILE_SIZE                 = 2.5
 	MAX_SPEED                       = 5
+	MAX_ASTEROIDS                   = 20
+	ASTEROID_SPEED                  = 1
+	ASTEROID_SIZE                   = 50.0
+	ASTEROID_POINTS                 = 12
 )
 
 type GameState struct {
 	playerShip *PlayerShip
+	asteroids  *[]Asteroid
+	debug      bool
 }
 
 type PlayerShip struct {
@@ -42,6 +49,57 @@ type Projectile struct {
 	ttl         int
 	orientation float32
 	size        float32
+}
+
+type Asteroid struct {
+	pos         rl.Vector2
+	speed       float32
+	vel         rl.Vector2
+	orientation float32
+	size        float32
+	sizes       []float32
+}
+
+func generateAsteroids() *[]Asteroid {
+
+	asteroids := []Asteroid{}
+	positions := make(map[rl.Vector2]bool)
+
+	for range MAX_ASTEROIDS {
+		//slices.Sort(angles)
+		points := []float32{}
+		for range ASTEROID_POINTS {
+			points = append(points, (rand.Float32()*0.7)+0.5)
+
+		}
+		/*for i := range ASTEROID_POINTS {
+			log.Printf("asteroid size: %f", points[i])
+		}
+		log.Println("\n")*/
+		cdX := rand.Float32() * SCREEN_SIZE_X
+		cdY := rand.Float32() * SCREEN_SIZE_Y
+		orientation := rand.Float32() * (math.Pi * 2)
+		directionX := float32(math.Cos(float64(orientation)))
+		directionY := float32(math.Sin(float64(orientation)))
+		speed := rand.Float32() * ASTEROID_SPEED
+		_, ok := positions[rl.NewVector2(cdX, cdY)]
+		for ok {
+			cdX := rand.Float32() * SCREEN_SIZE_X
+			cdY := rand.Float32() * SCREEN_SIZE_Y
+			_, ok = positions[rl.NewVector2(cdX, cdY)]
+		}
+		positions[rl.NewVector2(cdX, cdY)] = true
+		asteroid := Asteroid{
+			pos:         rl.NewVector2(cdX, cdY),
+			speed:       speed,
+			vel:         rl.Vector2Scale(rl.NewVector2(directionX, directionY), speed),
+			size:        ASTEROID_SIZE,
+			orientation: orientation,
+			sizes:       points,
+		}
+		asteroids = append(asteroids, asteroid)
+	}
+	return &asteroids
 }
 
 func (s *PlayerShip) shoot() {
@@ -137,6 +195,9 @@ func (s *PlayerShip) drawShip() {
 }
 
 func (g *GameState) input() {
+	if rl.IsKeyPressed(rl.KeyF1) {
+		g.debug = !g.debug
+	}
 	if rl.IsKeyDown(rl.KeyD) {
 		newOrientation := g.playerShip.orientation + PLAYER_SHIP_TURN_SPEED
 		if newOrientation >= 2*math.Pi {
@@ -172,7 +233,6 @@ func (g *GameState) input() {
 	newVector := rl.NewVector2(directionX, directionY)
 
 	if rl.IsKeyDown(rl.KeyW) {
-
 		//Agregarle la rapidez
 		g.playerShip.vel = rl.Vector2Add(
 			g.playerShip.vel,
@@ -181,7 +241,6 @@ func (g *GameState) input() {
 	}
 
 	if rl.IsKeyDown(rl.KeyS) {
-
 		//Agregarle la rapidez
 		g.playerShip.vel = rl.Vector2Subtract(
 			g.playerShip.vel,
@@ -197,23 +256,51 @@ func (g *GameState) input() {
 
 }
 
-func (g *GameState) update() {
-	g.input()
-	g.playerShip.pos = *resetPosition(&g.playerShip.pos)
-	g.playerShip.moveProjectiles()
-	g.playerShip.removeProjectiles()
-	g.playerShip.pos = rl.Vector2Add(g.playerShip.pos, g.playerShip.vel)
-	if g.playerShip.vel.X > MAX_SPEED {
-		g.playerShip.vel.X = MAX_SPEED
+func (a *Asteroid) drawAsteroid() {
+
+	//rl.DrawCircleV(a.pos, 2, rl.Blue)
+	//rl.DrawLineV(a.pos, rl.Vector2Add(a.pos, verticalDirection), rl.Pink)
+	//rl.DrawLineV(a.pos, rl.Vector2Add(a.pos, horizontalDirection), rl.Red)
+	//points = append(points, a.pos)
+	//rl.Vector2Add(rl.Vector2Scale(getDirection(a.anglePoints[i]), a.sizePoints[i]), a.pos)
+	types := [][]rl.Vector2{
+		{
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation), a.size*a.sizes[0]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+(math.Pi*2)), a.size*a.sizes[1]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.1*(math.Pi*2)), a.size*a.sizes[2]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.2*(math.Pi*2)), a.size*a.sizes[3]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.3*(math.Pi*2)), a.size*a.sizes[4]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.4*(math.Pi*2)), a.size*a.sizes[5]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.5*(math.Pi*2)), a.size*a.sizes[6]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.6*(math.Pi*2)), a.size*a.sizes[7]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.7*(math.Pi*2)), a.size*a.sizes[8]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.8*(math.Pi*2)), a.size*a.sizes[9]), a.pos),
+			rl.Vector2Add(rl.Vector2Scale(getDirection(a.orientation+1.9*(math.Pi*2)), a.size*a.sizes[10]), a.pos),
+		},
 	}
-	if g.playerShip.vel.Y > MAX_SPEED {
-		g.playerShip.vel.Y = MAX_SPEED
+	//points := types[rand.IntN(len(types)-1)]
+	points := types[0]
+
+	for i := range points {
+		rl.DrawLineV(
+			//a.pos,
+			points[i],
+			points[(i+1)%len(points)],
+			rl.White,
+		)
 	}
-	if g.playerShip.vel.X < -MAX_SPEED {
-		g.playerShip.vel.X = -MAX_SPEED
+}
+
+func (g *GameState) drawAsteroids() {
+	for _, p := range *g.asteroids {
+		p.drawAsteroid()
 	}
-	if g.playerShip.vel.Y < -MAX_SPEED {
-		g.playerShip.vel.Y = -MAX_SPEED
+}
+
+func (g *GameState) moveAsteroids() {
+	for i := range *g.asteroids {
+		(*g.asteroids)[i].pos = rl.Vector2Add((*g.asteroids)[i].pos, (*g.asteroids)[i].vel)
+		resetPosition(&(*g.asteroids)[i].pos)
 	}
 }
 
@@ -236,6 +323,27 @@ func resetPosition(position *rl.Vector2) *rl.Vector2 {
 	return position
 }
 
+func (g *GameState) update() {
+	g.input()
+	g.playerShip.pos = *resetPosition(&g.playerShip.pos)
+	g.playerShip.moveProjectiles()
+	g.playerShip.removeProjectiles()
+	g.moveAsteroids()
+	g.playerShip.pos = rl.Vector2Add(g.playerShip.pos, g.playerShip.vel)
+	if g.playerShip.vel.X > MAX_SPEED {
+		g.playerShip.vel.X = MAX_SPEED
+	}
+	if g.playerShip.vel.Y > MAX_SPEED {
+		g.playerShip.vel.Y = MAX_SPEED
+	}
+	if g.playerShip.vel.X < -MAX_SPEED {
+		g.playerShip.vel.X = -MAX_SPEED
+	}
+	if g.playerShip.vel.Y < -MAX_SPEED {
+		g.playerShip.vel.Y = -MAX_SPEED
+	}
+}
+
 func (g *GameState) render() {
 
 	rl.BeginDrawing()
@@ -245,25 +353,33 @@ func (g *GameState) render() {
 
 func (g *GameState) draw() {
 	rl.ClearBackground(rl.Black)
-
-	rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("(%f, %f)", g.playerShip.pos.X, g.playerShip.pos.Y), rl.Vector2{
-		X: 10,
-		Y: 10,
-	}, 10.0, 1.0, rl.White)
-	rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("Velocity: (%f, %f)", g.playerShip.vel.X, g.playerShip.vel.Y), rl.Vector2{
-		X: 10,
-		Y: 30,
-	}, 10.0, 1.0, rl.White)
-
-	for i, p := range *g.playerShip.projectiles {
-		rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("P(%f, %f)", p.pos.X, p.pos.Y), rl.Vector2{
+	if g.debug {
+		rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("Ship position: (%f, %f)", g.playerShip.pos.X, g.playerShip.pos.Y), rl.Vector2{
 			X: 10,
-			Y: 50 + 10*float32(i),
+			Y: 10,
+		}, 10.0, 1.0, rl.White)
+		rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("Velocity: (%f, %f)", g.playerShip.vel.X, g.playerShip.vel.Y), rl.Vector2{
+			X: 10,
+			Y: 30,
 		}, 10.0, 1.0, rl.White)
 
+		for i, p := range *g.playerShip.projectiles {
+			rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("P(%f, %f)", p.pos.X, p.pos.Y), rl.Vector2{
+				X: 150,
+				Y: 50 + 10*float32(i),
+			}, 10.0, 1.0, rl.White)
+		}
+
+		for i, a := range *g.asteroids {
+			rl.DrawTextEx(rl.GetFontDefault(), fmt.Sprintf("A(%f, %f)", a.pos.X, a.pos.Y), rl.Vector2{
+				X: 10,
+				Y: 50 + 10*float32(i),
+			}, 10.0, 1.0, rl.White)
+		}
 	}
 	g.playerShip.drawShip()
 	g.playerShip.drawProjectiles()
+	g.drawAsteroids()
 }
 
 func initGame() *GameState {
@@ -282,8 +398,9 @@ func initGame() *GameState {
 			},
 			projectiles: &[]Projectile{},
 		},
+		asteroids: generateAsteroids(),
+		debug:     true,
 	}
-
 	return &gState
 }
 
