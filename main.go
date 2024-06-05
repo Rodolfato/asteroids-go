@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand/v2"
 
@@ -77,10 +76,7 @@ func generateAsteroids() *[]Asteroid {
 			points = append(points, (rand.Float32()*0.6)+0.6)
 
 		}
-		/*for i := range ASTEROID_POINTS {
-			log.Printf("asteroid size: %f", points[i])
-		}
-		log.Println("\n")*/
+
 		cdX := rand.Float32() * SCREEN_SIZE_X
 		cdY := rand.Float32() * SCREEN_SIZE_Y
 		orientation := rand.Float32() * (math.Pi * 2)
@@ -105,6 +101,40 @@ func generateAsteroids() *[]Asteroid {
 		asteroids = append(asteroids, asteroid)
 	}
 	return &asteroids
+}
+
+func generateMidAsteroid(pos rl.Vector2, size float32) Asteroid {
+	points := []float32{}
+	for range ASTEROID_POINTS {
+		points = append(points, (rand.Float32()*0.6)+0.6)
+	}
+	posX := pos.X
+	posY := pos.Y
+	orientation := rand.Float32() * (math.Pi * 2)
+	directionX := float32(math.Cos(float64(orientation)))
+	directionY := float32(math.Sin(float64(orientation)))
+	speed := rand.Float32() * ASTEROID_SPEED
+	asteroid := Asteroid{
+		pos:         rl.NewVector2(posX, posY),
+		speed:       speed,
+		vel:         rl.Vector2Scale(rl.NewVector2(directionX, directionY), speed),
+		size:        ASTEROID_SIZE / size,
+		orientation: orientation,
+		sizes:       points,
+	}
+	return asteroid
+}
+
+func drawGameOverScreen() {
+	rl.DrawTextPro(rl.GetFontDefault(), "Game Over", rl.Vector2{
+		X: SCREEN_SIZE_X / 2,
+		Y: SCREEN_SIZE_Y / 2,
+	}, rl.Vector2Scale(rl.MeasureTextEx(rl.GetFontDefault(), "Game Over", 100.0, 1.0), 0.5), 0.0, 100.0, 1.0, rl.White)
+	rl.DrawTextPro(rl.GetFontDefault(), "Press Enter to try again", rl.Vector2{
+		X: SCREEN_SIZE_X / 2,
+		Y: SCREEN_SIZE_Y/2 + 100,
+	}, rl.Vector2Scale(rl.MeasureTextEx(rl.GetFontDefault(), "Press Enter to try again", 50.0, 1.0), 0.5), 0.0, 50.0, 1.0, rl.White)
+
 }
 
 func (s *PlayerShip) shoot() {
@@ -212,6 +242,28 @@ func (s *PlayerShip) drawShip() {
 	}
 }
 
+func drawLife(pos rl.Vector2, size float32, orientation float32) {
+	verticalDirection := rl.Vector2Scale(getDirection(orientation), size)
+	horizontalDirection := rl.Vector2Scale(getDirection(orientation+math.Pi*0.5), size)
+
+	points := []rl.Vector2{
+		rl.Vector2Add(pos, verticalDirection),
+		rl.Vector2Subtract(rl.Vector2Subtract(pos, verticalDirection), horizontalDirection),
+		pos,
+		rl.Vector2Add(rl.Vector2Subtract(pos, verticalDirection), horizontalDirection),
+		rl.Vector2Add(pos, verticalDirection),
+	}
+
+	for i := range points {
+		rl.DrawLineV(
+			points[i],
+			points[(i+1)%len(points)],
+			rl.White,
+		)
+	}
+
+}
+
 func (s *PlayerShip) getShipPoints() []rl.Vector2 {
 	verticalDirection := rl.Vector2Scale(getDirection(s.orientation), s.size)
 	horizontalDirection := rl.Vector2Scale(getDirection(s.orientation+math.Pi*0.5), s.size)
@@ -272,22 +324,36 @@ func (g *GameState) checkColissions() bool {
 }
 
 func (g *GameState) checkProjectileCollisions() {
-	asteroidsPoints := g.getAsteroidsPoints()
+
 	for i, p := range *g.playerShip.projectiles {
-		for j := range *g.asteroids {
-			if rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][0], asteroidsPoints[j][1], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][1], asteroidsPoints[j][2], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][2], asteroidsPoints[j][3], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][3], asteroidsPoints[j][4], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][4], asteroidsPoints[j][5], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][5], asteroidsPoints[j][6], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][6], asteroidsPoints[j][7], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][7], asteroidsPoints[j][8], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][8], asteroidsPoints[j][9], 20) ||
-				rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][9], asteroidsPoints[j][10], 20) {
-				removeItem(g.asteroids, j)
-				removeItem(g.playerShip.projectiles, i)
+		for j, a := range *g.asteroids {
+			asteroidsPoints := g.getAsteroidsPoints()
+			if j < len(*g.asteroids) {
+				if rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][0], asteroidsPoints[j][1], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][1], asteroidsPoints[j][2], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][2], asteroidsPoints[j][3], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][3], asteroidsPoints[j][4], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][4], asteroidsPoints[j][5], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][5], asteroidsPoints[j][6], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][6], asteroidsPoints[j][7], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][7], asteroidsPoints[j][8], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][8], asteroidsPoints[j][9], 20) ||
+					rl.CheckCollisionPointLine(p.pos, asteroidsPoints[j][9], asteroidsPoints[j][10], 20) {
+					removeItem(g.asteroids, j)
+					removeItem(g.playerShip.projectiles, i)
+					if a.size == ASTEROID_SIZE {
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0))
+					}
+					if a.size == ASTEROID_SIZE/2 {
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0))
+					}
+
+				}
+
 			}
+
 		}
 
 	}
@@ -307,9 +373,6 @@ func (g *GameState) input() {
 			g.playerShip.orientation = newOrientation
 		}
 
-		log.Printf("D key pressed")
-		log.Printf("Ship orientation: %f", g.playerShip.orientation)
-
 	}
 	if rl.IsKeyDown(rl.KeyA) {
 		newOrientation := g.playerShip.orientation - PLAYER_SHIP_TURN_SPEED
@@ -320,8 +383,6 @@ func (g *GameState) input() {
 		} else {
 			g.playerShip.orientation = newOrientation
 		}
-		log.Printf("A key pressed")
-		log.Printf("Ship orientation: %f", g.playerShip.orientation)
 	}
 
 	//Sentido y orientacion de la nave
@@ -417,39 +478,41 @@ func resetPosition(position *rl.Vector2) *rl.Vector2 {
 
 func (g *GameState) update() {
 	g.gameTime = rl.GetTime()
-	if !g.collision {
+	if !g.collision && g.lives > 0 {
 		g.input()
 	}
-	g.playerShip.pos = *resetPosition(&g.playerShip.pos)
-	g.playerShip.moveProjectiles()
-	g.playerShip.removeProjectiles()
-	g.checkProjectileCollisions()
+	if g.lives > 0 {
+		g.playerShip.pos = *resetPosition(&g.playerShip.pos)
+		g.playerShip.moveProjectiles()
+		g.playerShip.removeProjectiles()
+		g.checkProjectileCollisions()
+
+		g.playerShip.pos = rl.Vector2Add(g.playerShip.pos, g.playerShip.vel)
+		if g.playerShip.vel.X > MAX_SPEED {
+			g.playerShip.vel.X = MAX_SPEED
+		}
+		if g.playerShip.vel.Y > MAX_SPEED {
+			g.playerShip.vel.Y = MAX_SPEED
+		}
+		if g.playerShip.vel.X < -MAX_SPEED {
+			g.playerShip.vel.X = -MAX_SPEED
+		}
+		if g.playerShip.vel.Y < -MAX_SPEED {
+			g.playerShip.vel.Y = -MAX_SPEED
+		}
+
+		if g.collision {
+			g.destroyedTime -= 0.1
+			if g.destroyedTime < 0 {
+				g.restartGame()
+			}
+		} else {
+			if g.checkColissions() {
+				g.collision = true
+			}
+		}
+	}
 	g.moveAsteroids()
-
-	g.playerShip.pos = rl.Vector2Add(g.playerShip.pos, g.playerShip.vel)
-	if g.playerShip.vel.X > MAX_SPEED {
-		g.playerShip.vel.X = MAX_SPEED
-	}
-	if g.playerShip.vel.Y > MAX_SPEED {
-		g.playerShip.vel.Y = MAX_SPEED
-	}
-	if g.playerShip.vel.X < -MAX_SPEED {
-		g.playerShip.vel.X = -MAX_SPEED
-	}
-	if g.playerShip.vel.Y < -MAX_SPEED {
-		g.playerShip.vel.Y = -MAX_SPEED
-	}
-
-	if g.collision {
-		g.destroyedTime -= 0.1
-		if g.destroyedTime < 0 {
-			g.restartGame()
-		}
-	} else {
-		if g.checkColissions() {
-			g.collision = true
-		}
-	}
 
 }
 
@@ -505,12 +568,21 @@ func (g *GameState) draw() {
 	if g.collision {
 		g.playerShip.drawShipExplosion()
 
-	} else {
+	} else if g.lives > 0 {
 		g.playerShip.drawShip()
 	}
 
 	g.playerShip.drawProjectiles()
 	g.drawAsteroids()
+	for i := range g.lives {
+		drawLife(rl.Vector2{
+			X: 25 + 45*float32(i),
+			Y: SCREEN_SIZE_Y - 25,
+		}, 20, math.Pi+math.Pi*0.5)
+	}
+	if g.lives <= 0 {
+		drawGameOverScreen()
+	}
 }
 
 func initGame() *GameState {
