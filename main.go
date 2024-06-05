@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand/v2"
 
@@ -11,7 +12,7 @@ import (
 const (
 	PLAYER_SHIP_SIZE                = 20
 	PLAYER_SHIP_THICKNESS           = 1.5
-	PLAYER_SHIP_INITIAL_ORIENTATION = 0.0
+	PLAYER_SHIP_INITIAL_ORIENTATION = math.Pi + (math.Pi * 0.5)
 	PLAYER_SHIP_TURN_SPEED          = 0.02 * math.Pi
 	PLAYER_SHIP_SPEED               = 0.3
 	SCREEN_SIZE_X                   = 1024
@@ -25,6 +26,7 @@ const (
 	ASTEROID_SIZE                   = 50.0
 	ASTEROID_POINTS                 = 11
 	SHIP_TIME_IN_PIECES             = 5
+	LIVES                           = 2
 )
 
 type GameState struct {
@@ -103,7 +105,7 @@ func generateAsteroids() *[]Asteroid {
 	return &asteroids
 }
 
-func generateMidAsteroid(pos rl.Vector2, size float32) Asteroid {
+func generateMidAsteroid(pos rl.Vector2, size float32, speedMult float32) Asteroid {
 	points := []float32{}
 	for range ASTEROID_POINTS {
 		points = append(points, (rand.Float32()*0.6)+0.6)
@@ -113,7 +115,7 @@ func generateMidAsteroid(pos rl.Vector2, size float32) Asteroid {
 	orientation := rand.Float32() * (math.Pi * 2)
 	directionX := float32(math.Cos(float64(orientation)))
 	directionY := float32(math.Sin(float64(orientation)))
-	speed := rand.Float32() * ASTEROID_SPEED
+	speed := rand.Float32() * ASTEROID_SPEED * speedMult
 	asteroid := Asteroid{
 		pos:         rl.NewVector2(posX, posY),
 		speed:       speed,
@@ -342,12 +344,12 @@ func (g *GameState) checkProjectileCollisions() {
 					removeItem(g.asteroids, j)
 					removeItem(g.playerShip.projectiles, i)
 					if a.size == ASTEROID_SIZE {
-						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0))
-						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0, 3.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 2.0, 3.0))
 					}
 					if a.size == ASTEROID_SIZE/2 {
-						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0))
-						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0, 6.0))
+						*g.asteroids = append(*g.asteroids, generateMidAsteroid(a.pos, 4.0, 6.0))
 					}
 
 				}
@@ -512,6 +514,12 @@ func (g *GameState) update() {
 			}
 		}
 	}
+	if g.lives < 1 {
+		if rl.IsKeyPressed(rl.KeyEnter) {
+			g.reInitGame()
+			log.Println("Enter pressed")
+		}
+	}
 	g.moveAsteroids()
 
 }
@@ -604,7 +612,7 @@ func initGame() *GameState {
 		asteroids:     generateAsteroids(),
 		debug:         true,
 		collision:     false,
-		lives:         3,
+		lives:         LIVES,
 		gameTime:      0,
 		destroyedTime: SHIP_TIME_IN_PIECES,
 	}
@@ -623,6 +631,31 @@ func (g *GameState) restartGame() {
 	}
 	g.collision = false
 	g.lives = g.lives - 1
+	g.destroyedTime = SHIP_TIME_IN_PIECES
+
+}
+
+func (g *GameState) reInitGame() {
+
+	g.playerShip = &PlayerShip{
+		pos: rl.Vector2{
+			X: SCREEN_SIZE_X / 2,
+			Y: SCREEN_SIZE_Y / 2,
+		},
+		size:        PLAYER_SHIP_SIZE,
+		orientation: PLAYER_SHIP_INITIAL_ORIENTATION,
+		speed:       PLAYER_SHIP_SPEED,
+		vel: rl.Vector2{
+			X: 0,
+			Y: 0,
+		},
+		projectiles: &[]Projectile{},
+	}
+	g.asteroids = generateAsteroids()
+	g.debug = true
+	g.collision = false
+	g.lives = LIVES
+	g.gameTime = 0
 	g.destroyedTime = SHIP_TIME_IN_PIECES
 
 }
