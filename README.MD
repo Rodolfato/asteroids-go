@@ -57,3 +57,4 @@ const (
 - [ ] Organize the code for better understanding
 - [ ] Add alien ship enemies
 - [ ] Add Linux installation instructions
+- [ ] Add a configuration file for easy customization
