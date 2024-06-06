@@ -26,7 +26,7 @@ const (
 	ASTEROID_SIZE                   = 50.0
 	ASTEROID_POINTS                 = 11
 	SHIP_TIME_IN_PIECES             = 5
-	LIVES                           = 2
+	LIVES                           = 3
 )
 
 type GameState struct {
